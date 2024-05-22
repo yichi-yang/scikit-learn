@@ -209,7 +209,8 @@ def sag{{name_suffix}}(
     {{c_type}}[::1] intercept_sum_gradient_init,
     double intercept_decay,
     bint saga,
-    bint verbose
+    bint verbose,
+    bint sag_non_negative_weights
 ):
     """Stochastic Average Gradient (SAG) and SAGA solvers.
 
@@ -387,7 +388,8 @@ def sag{{name_suffix}}(
                        sum_gradient=sum_gradient,
                        x_ind_ptr=x_ind_ptr,
                        reset=False,
-                       n_iter=n_iter
+                       n_iter=n_iter,
+                       sag_non_negative_weights=sag_non_negative_weights
                    )
                    if status == -1:
                        break
@@ -492,7 +494,8 @@ def sag{{name_suffix}}(
                         feature_hist=&feature_hist[0],
                         prox=prox,
                         sum_gradient=sum_gradient,
-                        n_iter=n_iter
+                        n_iter=n_iter,
+                        sag_non_negative_weights=sag_non_negative_weights
                     )
                     if status == -1:
                         break
@@ -518,7 +521,8 @@ def sag{{name_suffix}}(
                 feature_hist=&feature_hist[0],
                 prox=prox,
                 sum_gradient=sum_gradient,
-                n_iter=n_iter
+                n_iter=n_iter,
+                sag_non_negative_weights=sag_non_negative_weights
             )
             if status == -1:
                 break
@@ -574,7 +578,8 @@ cdef int scale_weights{{name_suffix}}(
     int* feature_hist,
     bint prox,
     {{c_type}}* sum_gradient,
-    int n_iter
+    int n_iter,
+    bint sag_non_negative_weights
 ) noexcept nogil:
     """Scale the weights and reset wscale to 1.0 for numerical stability, and
     reset the just-in-time (JIT) update system.
@@ -603,7 +608,8 @@ cdef int scale_weights{{name_suffix}}(
         sum_gradient,
         NULL,
         True,
-        n_iter
+        n_iter,
+        sag_non_negative_weights
     )
     # if lagged update succeeded, reset wscale to 1.0
     if status == 0:
@@ -629,7 +635,8 @@ cdef int lagged_update{{name_suffix}}(
     {{c_type}}* sum_gradient,
     int* x_ind_ptr,
     bint reset,
-    int n_iter
+    int n_iter,
+    bint sag_non_negative_weights
 ) noexcept nogil:
     """Hard perform the JIT updates for non-zero features of present sample.
 
@@ -692,6 +699,8 @@ cdef int lagged_update{{name_suffix}}(
                         weights[idx] -= sum_gradient[idx] * grad_step
                         weights[idx] = _soft_thresholding{{name_suffix}}(weights[idx],
                                                           prox_step)
+                if sag_non_negative_weights:
+                    weights[idx] = fmax{{name_suffix}}(weights[idx], 0.)
 
                 if reset:
                     weights[idx] *= wscale

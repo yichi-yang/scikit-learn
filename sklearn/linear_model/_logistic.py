@@ -122,6 +122,7 @@ def _logistic_regression_path(
     sample_weight=None,
     l1_ratio=None,
     n_threads=1,
+    sag_non_negative_weights=False,
 ):
     """Compute a Logistic Regression model for a list of regularization
     parameters.
@@ -559,6 +560,7 @@ def _logistic_regression_path(
                 max_squared_sum,
                 warm_start_sag,
                 is_saga=(solver == "saga"),
+                sag_non_negative_weights=sag_non_negative_weights,
             )
 
         else:
@@ -573,7 +575,7 @@ def _logistic_regression_path(
                 multi_w0 = np.reshape(w0, (n_classes, -1), order="F")
             else:
                 multi_w0 = w0
-            if n_classes == 2:
+            if n_classes == 2 and not sag_non_negative_weights:
                 multi_w0 = multi_w0[1][np.newaxis, :]
             coefs.append(multi_w0.copy())
         else:
@@ -1124,7 +1126,10 @@ class LogisticRegression(LinearClassifierMixin, SparseCoefMixin, BaseEstimator):
             StrOptions({"auto", "ovr", "multinomial"}),
             Hidden(StrOptions({"deprecated"})),
         ],
+        "sag_non_negative_weights": ["boolean"],
     }
+
+    SAG_NON_NEGATIVE_WEIGHT_SUPPORT = True
 
     def __init__(
         self,
@@ -1144,6 +1149,7 @@ class LogisticRegression(LinearClassifierMixin, SparseCoefMixin, BaseEstimator):
         warm_start=False,
         n_jobs=None,
         l1_ratio=None,
+        sag_non_negative_weights=False,
     ):
         self.penalty = penalty
         self.dual = dual
@@ -1160,6 +1166,7 @@ class LogisticRegression(LinearClassifierMixin, SparseCoefMixin, BaseEstimator):
         self.warm_start = warm_start
         self.n_jobs = n_jobs
         self.l1_ratio = l1_ratio
+        self.sag_non_negative_weights = sag_non_negative_weights
 
     @_fit_context(prefer_skip_nested_validation=True)
     def fit(self, X, y, sample_weight=None):
@@ -1368,6 +1375,7 @@ class LogisticRegression(LinearClassifierMixin, SparseCoefMixin, BaseEstimator):
                 max_squared_sum=max_squared_sum,
                 sample_weight=sample_weight,
                 n_threads=n_threads,
+                sag_non_negative_weights=self.sag_non_negative_weights,
             )
             for class_, warm_start_coef_ in zip(classes_, warm_start_coef)
         )

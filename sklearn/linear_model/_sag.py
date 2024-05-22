@@ -100,6 +100,7 @@ def sag_solver(
     max_squared_sum=None,
     warm_start_mem=None,
     is_saga=False,
+    sag_non_negative_weights=False,
 ):
     """SAG solver for Ridge and LogisticRegression.
 
@@ -343,6 +344,7 @@ def sag_solver(
         intercept_decay,
         is_saga,
         verbose,
+        sag_non_negative_weights,
     )
 
     if n_iter_ == max_iter:
